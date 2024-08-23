@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReLU Function Estimation Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: space-between;
+            gap: 20px;
+            overflow-x: auto;
+        }
+        .unit {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            flex: 0 0 250px;
+        }
+        .chart-container {
+            position: relative;
+            height: 0;
+            width: 100%;
+            padding-bottom: 100%; /* 1:1 Aspect Ratio */
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        button {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="unit">
+            <div class="chart-container">
+                <canvas id="relu1Plot"></canvas>
+            </div>
+            <div class="controls">
+                <label for="relu1Weight">Weight: <span id="relu1WeightValue">1</span></label>
+                <input type="range" id="relu1Weight" min="-5" max="5" step="0.1" value="1">
+                <label for="relu1Bias">Bias: <span id="relu1BiasValue">0</span></label>
+                <input type="range" id="relu1Bias" min="-5" max="5" step="0.1" value="0">
+            </div>
+        </div>
+        <div class="unit">
+            <div class="chart-container">
+                <canvas id="relu2Plot"></canvas>
+            </div>
+            <div class="controls">
+                <label for="relu2Weight">Weight: <span id="relu2WeightValue">1</span></label>
+                <input type="range" id="relu2Weight" min="-5" max="5" step="0.1" value="1">
+                <label for="relu2Bias">Bias: <span id="relu2BiasValue">0</span></label>
+                <input type="range" id="relu2Bias" min="-5" max="5" step="0.1" value="0">
+            </div>
+        </div>
+        <div class="unit">
+            <div class="chart-container">
+                <canvas id="relu3Plot"></canvas>
+            </div>
+            <div class="controls">
+                <label for="relu3Weight">Weight: <span id="relu3WeightValue">1</span></label>
+                <input type="range" id="relu3Weight" min="-5" max="5" step="0.1" value="1">
+                <label for="relu3Bias">Bias: <span id="relu3BiasValue">0</span></label>
+                <input type="range" id="relu3Bias" min="-5" max="5" step="0.1" value="0">
+            </div>
+        </div>
+        <div class="unit">
+            <div class="chart-container">
+                <canvas id="finalPlot"></canvas>
+            </div>
+            <div class="controls">
+                <label for="outputWeight">Output Weight: <span id="outputWeightValue">1</span></label>
+                <input type="range" id="outputWeight" min="-5" max="5" step="0.1" value="1">
+                <label for="outputBias">Output Bias: <span id="outputBiasValue">0</span></label>
+                <input type="range" id="outputBias" min="-5" max="5" step="0.1" value="0">
+            </div>
+        </div>
+    </div>
+    <button id="generateBtn">Generate New Target Function</button>
+
+    <script>
+        let charts = {};
+        let targetFunction;
+
+        function relu(x, weight, bias) {
+            return Math.max(0, weight * x + bias);
+        }
+
+        function generateRandomParams() {
+            return {
+                weight: Math.random() * 4 - 2,
+                bias: Math.random() * 4 - 2
+            };
+        }
+
+        function generateTargetFunction() {
+            const relu1 = generateRandomParams();
+            const relu2 = generateRandomParams();
+            const relu3 = generateRandomParams();
+            const outputParams = generateRandomParams();
+
+            return (x) => {
+                const h1 = relu(x, relu1.weight, relu1.bias);
+                const h2 = relu(x, relu2.weight, relu2.bias);
+                const h3 = relu(x, relu3.weight, relu3.bias);
+                return outputParams.weight * (h1 + h2 + h3) + outputParams.bias;
+            };
+        }
+
+        function getUserFunction() {
+            const relu1Weight = parseFloat(document.getElementById('relu1Weight').value);
+            const relu1Bias = parseFloat(document.getElementById('relu1Bias').value);
+            const relu2Weight = parseFloat(document.getElementById('relu2Weight').value);
+            const relu2Bias = parseFloat(document.getElementById('relu2Bias').value);
+            const relu3Weight = parseFloat(document.getElementById('relu3Weight').value);
+            const relu3Bias = parseFloat(document.getElementById('relu3Bias').value);
+            const outputWeight = parseFloat(document.getElementById('outputWeight').value);
+            const outputBias = parseFloat(document.getElementById('outputBias').value);
+
+            return (x) => {
+                const h1 = relu(x, relu1Weight, relu1Bias);
+                const h2 = relu(x, relu2Weight, relu2Bias);
+                const h3 = relu(x, relu3Weight, relu3Bias);
+                return outputWeight * (h1 + h2 + h3) + outputBias;
+            };
+        }
+
+        function updateCharts() {
+            const userFunction = getUserFunction();
+
+            // Update ReLU unit charts
+            for (let i = 1; i <= 3; i++) {
+                const weight = parseFloat(document.getElementById(`relu${i}Weight`).value);
+                const bias = parseFloat(document.getElementById(`relu${i}Bias`).value);
+                const kink = -bias / weight;
+                const xMin = kink - 5;
+                const xMax = kink + 5;
+                const xValues = Array.from({length: 101}, (_, i) => xMin + (i / 100) * (xMax - xMin));
+                const yValues = xValues.map(x => relu(x, weight, bias));
+
+                updateChart(`relu${i}Plot`, [{
+                    label: `ReLU ${i}`,
+                    data: yValues.map((y, index) => ({x: xValues[index], y})),
+                    borderColor: `hsl(${120 * i}, 70%, 50%)`,
+                    tension: 0,
+                    pointRadius: 0
+                }], xMin, xMax, Math.min(...yValues) - 1, Math.max(...yValues) + 1);
+            }
+
+            // Update final output chart
+            const xValues = Array.from({length: 101}, (_, i) => i / 10);
+            const targetYValues = xValues.map(x => targetFunction(x));
+            const userYValues = xValues.map(x => userFunction(x));
+            const allYValues = [...targetYValues, ...userYValues];
+            const minY = Math.min(...allYValues) - 1;
+            const maxY = Math.max(...allYValues) + 1;
+
+            updateChart('finalPlot', [
+                {
+                    label: 'Target Function',
+                    data: targetYValues.map((y, index) => ({x: xValues[index], y})),
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0,
+                    pointRadius: 0
+                },
+                {
+                    label: 'User Estimation',
+                    data: userYValues.map((y, index) => ({x: xValues[index], y})),
+                    borderColor: 'rgb(255, 99, 132)',
+                    tension: 0,
+                    pointRadius: 0
+                }
+            ], 0, 10, minY, maxY);
+        }
+
+        function updateChart(chartId, datasets, xMin, xMax, yMin, yMax) {
+            if (charts[chartId]) {
+                charts[chartId].data.datasets = datasets;
+                charts[chartId].options.scales.x.min = xMin;
+                charts[chartId].options.scales.x.max = xMax;
+                charts[chartId].options.scales.y.min = yMin;
+                charts[chartId].options.scales.y.max = yMax;
+                charts[chartId].update();
+            } else {
+                const ctx = document.getElementById(chartId).getContext('2d');
+                charts[chartId] = new Chart(ctx, {
+                    type: 'line',
+                    data: { datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        aspectRatio: 1,
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                position: 'bottom',
+                                title: { display: true, text: 'X' },
+                                min: xMin,
+                                max: xMax
+                            },
+                            y: {
+                                title: { display: true, text: 'Y' },
+                                min: yMin,
+                                max: yMax
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function generateNewTargetFunction() {
+            targetFunction = generateTargetFunction();
+            updateCharts();
+        }
+
+        document.getElementById('generateBtn').addEventListener('click', generateNewTargetFunction);
+
+        // Add event listeners to all sliders
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            slider.addEventListener('input', (e) => {
+                document.getElementById(e.target.id + 'Value').textContent = e.target.value;
+                updateCharts();
+            });
+        });
+
+        // Initial generation
+        generateNewTargetFunction();
+    </script>
+</body>
+</html>
